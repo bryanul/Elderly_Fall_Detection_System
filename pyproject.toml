@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "elderly-fall-detection-system"
+version = "0.1.0"
+description = ""
+authors = ["Franco Cuya <francocuya13@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.32.4"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
