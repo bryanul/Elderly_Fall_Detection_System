@@ -1,9 +1,9 @@
 import base64
+import datetime
 from io import BytesIO
+from typing import Any, Dict, List, Optional
 
 import requests
-import datetime
-from typing import Dict, Any
 
 
 class TelegramAlertBot:
@@ -84,7 +84,7 @@ class TelegramAlertBot:
         except Exception as e:
             return {"success": False, "error": f"Failed to send alert: {str(e)}"}
 
-    def get_updates(self) -> Dict[str, Any]:
+    def get_updates(self) -> Optional[List[Dict[str, Any]]]:
         """
         Get recent updates (useful for finding chat IDs)
 
@@ -92,11 +92,22 @@ class TelegramAlertBot:
             API response with recent messages
         """
         url = f"{self.base_url}/getUpdates"
+        chats = []
 
         try:
             response = requests.get(url)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            for update in data["result"]:
+                chat_id = update["message"]["chat"]["id"]
+                name = update["message"]["chat"]["first_name"]
+
+                chat_info = {"chat_id": chat_id, "name": name}
+
+                if not chat_info in chats:
+                    chats.append(chat_info)
+            return chats
+
         except requests.exceptions.RequestException as e:
             print(f"Error getting updates: {e}")
-            return {"ok": False, "error": str(e)}
+            return None
