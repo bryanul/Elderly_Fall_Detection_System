@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Registrar cuidador y personas</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50 min-h-screen flex flex-col items-center p-6">
+    <h1 class="text-3xl font-bold mb-8 text-gray-800">
+      Registrar cuidador y personas
+    </h1>
+
+    <form
+      id="registration-form"
+      class="w-full max-w-3xl bg-white p-8 rounded-lg shadow-md"
+    >
+      <fieldset class="mb-6 border border-gray-300 rounded-md px-4 py-4">
+        <legend class="text-lg font-semibold text-gray-700 mb-2 px-2">
+          Chats disponibles
+        </legend>
+
+        <label for="selected_chat" class="block text-gray-700 font-medium mb-1"
+          >Selecciona el chat:</label
+        >
+        <select
+          name="selected_chat"
+          id="selected_chat"
+          required
+          class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="" disabled selected>-- Elige un chat --</option>
+          {% for chat in chats %}
+          <option value="{{ chat.chat_id }}">
+            {{ chat.chat_id }} - {{ chat.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </fieldset>
+
+      <fieldset class="mb-6 border border-gray-300 rounded-md p-4">
+        <legend class="text-lg font-semibold text-gray-700 mb-4 px-2">
+          Personas a cuidar
+        </legend>
+
+        <div id="people-container" class="space-y-6"></div>
+
+        <button
+          type="button"
+          id="add-person"
+          class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+        >
+          + Añadir persona
+        </button>
+      </fieldset>
+
+      <button
+        type="submit"
+        id="submit-btn"
+        class="w-full py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+      >
+        Enviar registro
+      </button>
+    </form>
+
+    <pre
+      id="response"
+      class="whitespace-pre-wrap mt-8 p-4 max-w-3xl w-full bg-gray-100 rounded-md text-gray-700"
+    ></pre>
+
+    <script src="static/script.js"></script>
+  </body>
+</html>
