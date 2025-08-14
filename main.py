@@ -1,54 +1,112 @@
-import os
+import time
 
-from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+import numpy as np
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
-from alerts.telegram_alert_bot import TelegramAlertBot
-
-load_dotenv()
-
-bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-
-if not bot_token:
-    raise ValueError("TELEGRAM_BOT_TOKEN not found in .env file. Please setup.")
+from app.alerts.telegram_alert_bot import TelegramAlertBot
+from app.core.config import settings
+from app.fall_and_face_tracker import FallAndFaceTracker
+from app.modules.face_recognition import embed_face
 
 app = Flask(__name__)
-bot = TelegramAlertBot(bot_token)
+app.config.update(settings.app.dict())
+app.secret_key = settings.app.secret_key
 
+bot = TelegramAlertBot(settings.telegram.bot_token)
 
-def your_embedding_function(image_bytes):
-    return [0.1, 0.2, 0.3]  # Replace with real embeddings
+tracker = FallAndFaceTracker(**settings.get_tracker_config(), alert_bot=bot)
+tracker.start_async()
 
 
 @app.route("/register", methods=["POST"])
 def register():
-    selected_chat = request.form.get("selected_chat")
+    selected_chat = request.form.get("caretaker_chat_id")
 
-    people = []
+    bot.set_chat_id(selected_chat)
+    people = {
+        "Bryan Ugas": np.load("face_emb/bryan.npy"),
+    }
     idx = 0
     while True:
         person_name = request.form.get(f"people[{idx}][name]")
         if not person_name:
             break
 
-        images = request.files.getlist(f"people[{idx}][images]")
-        embeddings = []
-        for img in images:
-            img_bytes = img.read()
-            emb = your_embedding_function(img_bytes)
-            embeddings.append(emb)
+        img = request.files.get(f"people[{idx}][image]")
 
-        people.append({"name": person_name, "embeddings": embeddings})
+        img_bytes = img.read()
+        embeddings = embed_face(img_bytes)
+
+        people[person_name] = embeddings
         idx += 1
 
-    return jsonify({"message": "Registered successfully", "people_count": len(people)})
+    tracker.set_face_db(people)
+
+    session["registration_complete"] = True
+    session["selected_chat"] = selected_chat
+    session["registered_people"] = list(people.keys())
+
+    return jsonify(
+        {
+            "message": "Registered successfully",
+            "people_count": len(people),
+            "chat_id": selected_chat,
+            "people": list(people.keys()),
+        }
+    )
 
 
 @app.route("/")
 def index():
     chats = bot.get_updates()
-    return render_template("index.html", title="Registro", chats=chats)
+    registration_state = {
+        "selected_chat": session.get("selected_chat"),
+        "registered_people": session.get("registered_people", []),
+        "registration_complete": session.get("registration_complete", False),
+    }
+    return render_template(
+        "index.html", title="Registro", chats=chats, state=registration_state
+    )
+
+
+@app.route("/video_feed")
+def video_feed():
+    def gen():
+        while True:
+            frame = tracker.get_latest_frame()
+            if frame is not None:
+                yield b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
+            time.sleep(settings.video.stream_sleep_interval)
+
+    return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.route("/show_video")
+def show_video():
+    if not session.get("registration_complete"):
+        return redirect(url_for("index"))
+    return render_template("video.html")
+
+
+@app.route("/clear_session")
+def clear_session():
+    """Clear session data and redirect to index."""
+    session.clear()
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        debug=settings.app.debug,
+        host=settings.app.host,
+        port=settings.app.port,
+    )

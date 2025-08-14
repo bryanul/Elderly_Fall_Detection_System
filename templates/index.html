@@ -4,71 +4,370 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Registrar cuidador y personas</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            animation: {
+              "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+              "bounce-gentle": "bounce 2s infinite",
+            },
+          },
+        },
+      };
+    </script>
   </head>
-  <body class="bg-gray-50 min-h-screen flex flex-col items-center p-6">
-    <h1 class="text-3xl font-bold mb-8 text-gray-800">
-      Registrar cuidador y personas
-    </h1>
+  <body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-3 h-3 bg-indigo-500 rounded-full animate-pulse-slow"
+            ></div>
+            <h1 class="text-2xl font-bold text-gray-800">
+              Registrar cuidador y personas
+            </h1>
+          </div>
 
-    <form
-      id="registration-form"
-      class="w-full max-w-3xl bg-white p-8 rounded-lg shadow-md"
-    >
-      <fieldset class="mb-6 border border-gray-300 rounded-md px-4 py-4">
-        <legend class="text-lg font-semibold text-gray-700 mb-2 px-2">
-          Chats disponibles
-        </legend>
+          <!-- Status indicator -->
+          <div class="flex items-center space-x-2">
+            {% if state.registration_complete %}
+            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span class="text-green-600 text-sm font-medium">REGISTRADO</span>
+            {% else %}
+            <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+            <span class="text-yellow-600 text-sm font-medium"
+              >CONFIGURACIÓN</span
+            >
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </header>
 
-        <label for="selected_chat" class="block text-gray-700 font-medium mb-1"
-          >Selecciona el chat:</label
+    <!-- Main content -->
+    <main class="flex-1 flex items-center justify-center p-6">
+      <div class="w-full max-w-4xl">
+        <!-- Registration status banner -->
+        {% if state.registration_complete %}
+        <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+          <div class="flex items-center">
+            <svg
+              class="w-5 h-5 text-green-400 mr-3"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+            <div>
+              <h3 class="text-sm font-medium text-green-800">
+                Sistema configurado correctamente
+              </h3>
+              <p class="text-sm text-green-700 mt-1">
+                Chat: {{ state.selected_chat }} | Personas registradas: {{
+                state.registered_people|length }} {% if state.registered_people
+                %} ({{ state.registered_people|join(', ') }}) {% endif %}
+              </p>
+            </div>
+          </div>
+          <div class="mt-3 flex space-x-2">
+            <a
+              href="{{ url_for('show_video') }}"
+              class="inline-flex items-center px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+            >
+              <svg
+                class="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                ></path>
+              </svg>
+              Ver video en vivo
+            </a>
+            <a
+              href="{{ url_for('clear_session') }}"
+              class="inline-flex items-center px-3 py-1 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors"
+            >
+              <svg
+                class="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                ></path>
+              </svg>
+              Nueva configuración
+            </a>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Registration form container -->
+        <div
+          class="bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-200"
         >
-        <select
-          name="selected_chat"
-          id="selected_chat"
-          required
-          class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="" disabled selected>-- Elige un chat --</option>
-          {% for chat in chats %}
-          <option value="{{ chat.chat_id }}">
-            {{ chat.chat_id }} - {{ chat.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </fieldset>
+          <!-- Form header -->
+          <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+              <svg
+                class="w-6 h-6 text-indigo-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                ></path>
+              </svg>
+              <h2 class="text-xl font-semibold text-gray-800">
+                {% if state.registration_complete %} Reconfigurar sistema {%
+                else %} Configuración del sistema {% endif %}
+              </h2>
+            </div>
+          </div>
 
-      <fieldset class="mb-6 border border-gray-300 rounded-md p-4">
-        <legend class="text-lg font-semibold text-gray-700 mb-4 px-2">
-          Personas a cuidar
-        </legend>
+          <!-- Form content -->
+          <form id="registration-form" class="p-8 space-y-8">
+            <!-- Chat selection section -->
+            <div class="space-y-4">
+            <div class="flex items-center space-x-2 mb-4">
+              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+              </svg>
+              <h3 class="text-lg font-semibold text-gray-700">Chats disponibles</h3>
+            </div>
 
-        <div id="people-container" class="space-y-6"></div>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <label for="selected_chat" class="block text-gray-700 font-medium mb-2">
+                Selecciona el chat:
+              </label>
+              <select name="selected_chat" id="selected_chat" required class="w-full border border-gray-300 rounded-lg p-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                <option value="" disabled {% if not state.selected_chat %}selected{% endif %}>
+                  -- Elige un chat --
+                </option>
+                {% for chat in chats %}
+                <option value="{{ chat.chat_id }}" {% if state.selected_chat == chat.chat_id|string %}selected{% endif %}>
+                  {{ chat.chat_id }} - {{ chat.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
 
-        <button
-          type="button"
-          id="add-person"
-          class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-        >
-          + Añadir persona
-        </button>
-      </fieldset>
+            <!-- People registration section -->
+            <div class="space-y-4">
+              <div class="flex items-center space-x-2 mb-4">
+                <svg
+                  class="w-5 h-5 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  ></path>
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-700">
+                  Personas a cuidar
+                </h3>
+              </div>
 
-      <button
-        type="submit"
-        id="submit-btn"
-        class="w-full py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
-      >
-        Enviar registro
-      </button>
-    </form>
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <div id="people-container" class="space-y-6 mb-6"></div>
 
-    <pre
-      id="response"
-      class="whitespace-pre-wrap mt-8 p-4 max-w-3xl w-full bg-gray-100 rounded-md text-gray-700"
-    ></pre>
+                <button
+                  type="button"
+                  id="add-person"
+                  class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-50 transition-colors"
+                >
+                  <svg
+                    class="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    ></path>
+                  </svg>
+                  Añadir persona
+                </button>
+              </div>
+            </div>
 
-    <script src="static/script.js"></script>
+            <!-- Submit button -->
+            <button
+              type="submit"
+              id="submit-btn"
+              class="w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white transition-colors"
+            >
+              <div class="flex items-center justify-center space-x-2">
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <span
+                  >{% if state.registration_complete %}Actualizar registro{%
+                  else %}Enviar registro{% endif %}</span
+                >
+              </div>
+            </button>
+          </form>
+
+          <!-- Form footer with info -->
+          <div class="bg-gray-50 px-6 py-3 border-t border-gray-200">
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center space-x-4 text-gray-600">
+                <div class="flex items-center space-x-1">
+                  <svg
+                    class="w-4 h-4 text-indigo-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <circle cx="10" cy="10" r="4" />
+                  </svg>
+                  <span>Sistema de configuración</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                  <svg
+                    class="w-4 h-4 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m5.25-4.5v12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18.75V5.25A2.25 2.25 0 015.25 3h12a2.25 2.25 0 012.25 2.25z"
+                    ></path>
+                  </svg>
+                  <span>Configuración segura</span>
+                </div>
+              </div>
+
+              <div class="text-gray-500">
+                <span id="current-time" class="font-mono"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="mt-6 flex justify-center space-x-4">
+          {% if state.registration_complete %}
+          <a
+            href="{{ url_for('show_video') }}"
+            class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-50"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              ></path>
+            </svg>
+            Ver video en vivo
+          </a>
+          {% else %}
+          <a
+            href="{{ url_for('show_video') }}"
+            class="inline-flex items-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed opacity-50"
+            title="Completa la configuración primero"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              ></path>
+            </svg>
+            Ver video en vivo
+          </a>
+          {% endif %}
+
+          <button
+            onclick="resetForm()"
+            class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-50"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              ></path>
+            </svg>
+            Limpiar formulario
+          </button>
+        </div>
+
+        <!-- Response display -->
+        <pre
+          id="response"
+          class="whitespace-pre-wrap mt-8 p-4 w-full bg-gray-100 rounded-lg text-gray-700 border border-gray-200 hidden"
+        ></pre>
+      </div>
+    </main>
+
+    <!-- Pass server state to JavaScript -->
+    <script type="application/json" id="server-state">
+      {{ state|tojson }}
+    </script>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
   </body>
 </html>

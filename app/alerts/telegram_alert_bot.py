@@ -16,20 +16,20 @@ class TelegramAlertBot:
         """
         self.bot_token = bot_token
         self.base_url = f"https://api.telegram.org/bot{bot_token}"
+        self.chat_id = None
 
-    def send_message(self, chat_id: str, text: str) -> Dict[str, Any]:
+    def send_message(self, text: str) -> Dict[str, Any]:
         """
         Send a simple text message.
 
         Args:
-            chat_id: Target chat ID or username
             text: Text message to send
 
         Returns:
             API response as a dictionary
         """
         url = f"{self.base_url}/sendMessage"
-        payload = {"chat_id": chat_id, "text": text, "parse_mode": "markdown"}
+        payload = {"chat_id": self.chat_id, "text": text, "parse_mode": "markdown"}
         try:
             response = requests.post(url, json=payload)
             response.raise_for_status()
@@ -39,7 +39,6 @@ class TelegramAlertBot:
 
     def send_alert(
         self,
-        chat_id: str,
         image_source: str,
         alert_title: str,
         alert_message: str,
@@ -49,15 +48,17 @@ class TelegramAlertBot:
         Send an alert with an image and formatted text as caption.
 
         Args:
-            chat_id: Target chat ID or username
             image_source: Image in base64 (string)
             alert_title: Alert title
             alert_message: Alert description
-            severity: Severity level (INFO, WARNING, ERROR, CRITICAL)
+            severity: Severity level (INFO, WARNING)
 
         Returns:
             Dictionary with the request result
         """
+        if not self.chat_id:
+            print("Chat ID not set, cannot send alert")
+            return {"success": False, "error": "Chat ID not set"}
         severity_emojis = {"INFO": "ℹ️", "WARNING": "⚠️"}
 
         emoji = severity_emojis.get(severity.upper(), "📢")
@@ -73,7 +74,7 @@ class TelegramAlertBot:
         )
 
         url = f"{self.base_url}/sendPhoto"
-        data = {"chat_id": chat_id, "parse_mode": "markdown", "caption": caption}
+        data = {"chat_id": self.chat_id, "parse_mode": "markdown", "caption": caption}
 
         try:
             image_bytes = base64.b64decode(image_source)
@@ -82,6 +83,7 @@ class TelegramAlertBot:
             response.raise_for_status()
             return {"success": True, "response": response.json()}
         except Exception as e:
+            print(e)
             return {"success": False, "error": f"Failed to send alert: {str(e)}"}
 
     def get_updates(self) -> Optional[List[Dict[str, Any]]]:
@@ -111,3 +113,6 @@ class TelegramAlertBot:
         except requests.exceptions.RequestException as e:
             print(f"Error getting updates: {e}")
             return None
+
+    def set_chat_id(self, chat_id: str):
+        self.chat_id = chat_id
