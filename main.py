@@ -97,6 +97,15 @@ def show_video():
     return render_template("video.html")
 
 
+@app.route("/update_chats", methods=["POST"])
+def update_chats():
+    try:
+        chats = bot.get_updates()
+        return jsonify({"success": True, "message": "Chats actualizados correctamente"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/clear_session")
 def clear_session():
     """Clear session data and redirect to index."""

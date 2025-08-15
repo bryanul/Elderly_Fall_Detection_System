@@ -151,29 +151,70 @@
           <form id="registration-form" class="p-8 space-y-8">
             <!-- Chat selection section -->
             <div class="space-y-4">
-            <div class="flex items-center space-x-2 mb-4">
-              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-              </svg>
-              <h3 class="text-lg font-semibold text-gray-700">Chats disponibles</h3>
-            </div>
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-2">
+                  <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                  </svg>
+                  <h3 class="text-lg font-semibold text-gray-700">Chats disponibles</h3>
+                </div>
 
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <label for="selected_chat" class="block text-gray-700 font-medium mb-2">
-                Selecciona el chat:
-              </label>
-              <select name="selected_chat" id="selected_chat" required class="w-full border border-gray-300 rounded-lg p-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-                <option value="" disabled {% if not state.selected_chat %}selected{% endif %}>
-                  -- Elige un chat --
-                </option>
-                {% for chat in chats %}
-                <option value="{{ chat.chat_id }}" {% if state.selected_chat == chat.chat_id|string %}selected{% endif %}>
-                  {{ chat.chat_id }} - {{ chat.name }}
-                </option>
-                {% endfor %}
-              </select>
+                <!-- Update chats button -->
+                <button
+                  type="button"
+                  id="update-chats-btn"
+                  onclick="updateChats()"
+                  class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  Actualizar chats
+                </button>
+              </div>
+
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <label for="selected_chat" class="block text-gray-700 font-medium">
+                    Selecciona el chat:
+                  </label>
+
+                  <!-- QR Code display -->
+                  <div class="flex items-center space-x-3">
+                    <span class="text-sm text-gray-600">Código QR del bot:</span>
+                    <img
+                      src="{{ url_for('static', filename='qr.png') }}"
+                      alt="QR Code del bot"
+                      class="w-16 h-16 border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      onclick="showQRModal()"
+                      title="Click para ver en grande"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <select name="selected_chat" id="selected_chat" required class="w-full border border-gray-300 rounded-lg p-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                      <option value="" disabled {% if not state.selected_chat %}selected{% endif %}>
+                        -- Elige un chat --
+                      </option>
+                      {% for chat in chats %}
+                      <option value="{{ chat.chat_id }}" {% if state.selected_chat == chat.chat_id|string %}selected{% endif %}>
+                        {{ chat.chat_id }} - {{ chat.name }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <div class="flex items-center justify-center text-sm text-gray-500">
+                    <div class="text-center">
+                      <p>Escanea el QR para iniciar chat</p>
+                      <p class="text-xs mt-1">con el bot de Telegram</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
             <!-- People registration section -->
             <div class="space-y-4">
@@ -363,11 +404,98 @@
       </div>
     </main>
 
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-800">Código QR del Bot</h3>
+          <button onclick="hideQRModal()" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="text-center">
+          <img
+            src="{{ url_for('static', filename='qr.png') }}"
+            alt="QR Code del bot"
+            class="w-64 h-64 mx-auto border border-gray-300 rounded-lg shadow-sm"
+          />
+          <p class="text-sm text-gray-600 mt-4">Escanea este código con Telegram para iniciar el chat</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Pass server state to JavaScript -->
     <script type="application/json" id="server-state">
       {{ state|tojson }}
     </script>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <script>
+      // QR Modal functions
+      function showQRModal() {
+        document.getElementById('qr-modal').classList.remove('hidden');
+        document.getElementById('qr-modal').classList.add('flex');
+      }
+
+      function hideQRModal() {
+        document.getElementById('qr-modal').classList.add('hidden');
+        document.getElementById('qr-modal').classList.remove('flex');
+      }
+
+      // Update chats function
+      async function updateChats() {
+        const button = document.getElementById('update-chats-btn');
+        const originalText = button.innerHTML;
+
+        // Show loading state
+        button.innerHTML = `
+          <svg class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Actualizando...
+        `;
+        button.disabled = true;
+
+        try {
+          const response = await fetch('/update_chats', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            // Reload the page to show updated chats
+            window.location.reload();
+          } else {
+            throw new Error('Error al actualizar chats');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error al actualizar los chats. Por favor, inténtalo de nuevo.');
+        } finally {
+          button.innerHTML = originalText;
+          button.disabled = false;
+        }
+      }
+
+      // Close modal when clicking outside
+      document.getElementById('qr-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+          hideQRModal();
+        }
+      });
+
+      // Close modal with Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          hideQRModal();
+        }
+      });
+    </script>
   </body>
 </html>
