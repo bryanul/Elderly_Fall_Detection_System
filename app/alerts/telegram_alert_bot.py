@@ -39,10 +39,10 @@ class TelegramAlertBot:
 
     def send_alert(
         self,
-        image_source: str,
         alert_title: str,
         alert_message: str,
-        severity: str = "INFO",
+        image_source: Optional[str] = None,
+        severity: str = "Información",
     ) -> Dict[str, Any]:
         """
         Send an alert with an image and formatted text as caption.
@@ -51,7 +51,7 @@ class TelegramAlertBot:
             image_source: Image in base64 (string)
             alert_title: Alert title
             alert_message: Alert description
-            severity: Severity level (INFO, WARNING)
+            severity: Severity level (Información, Emergencia)
 
         Returns:
             Dictionary with the request result
@@ -59,15 +59,13 @@ class TelegramAlertBot:
         if not self.chat_id:
             print("Chat ID not set, cannot send alert")
             return {"success": False, "error": "Chat ID not set"}
-        severity_emojis = {"INFO": "ℹ️", "WARNING": "⚠️"}
+        severity_emojis = {"Información": "ℹ️", "Emergencia": "⚠️"}
 
         emoji = severity_emojis.get(severity.upper(), "📢")
-        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime(
-            "%Y-%m-%d %H:%M:%S UTC"
-        )
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y ")
 
         caption = (
-            f"{emoji} *{severity.upper()} ALERT*\n\n"
+            f"{emoji} *Alerta de {severity.upper()}*\n\n"
             f"*{alert_title}*\n\n"
             f"{alert_message}\n\n"
             f"⏰ {timestamp}"

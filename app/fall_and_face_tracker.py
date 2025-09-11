@@ -88,7 +88,7 @@ class FallAndFaceTracker:
 
         # Process fall detection
         if self.fall_detector.process_detection(track_id, class_id):
-            identity = self.person_tracker.get_identity(track_id) or "unknown"
+            identity = self.person_tracker.get_identity(track_id) or "Alguien"
             identity_text = f"{identity} ha sufrido una caída!"
             self.send_alert_bot("Caída detectada!", identity_text)
 
@@ -194,7 +194,7 @@ class FallAndFaceTracker:
             image_base64 = self.video_processor.get_latest_frame_base64()
             if image_base64:
                 self.alert_bot.send_alert(
-                    image_base64, alert_title, alert_message, "WARNING"
+                    alert_title, alert_message, image_base64, "Emergencia"
                 )
 
     def set_face_db(self, emb_dict: Dict[str, List[float]]) -> None:
