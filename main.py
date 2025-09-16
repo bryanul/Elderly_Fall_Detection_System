@@ -16,25 +16,29 @@ from app.alerts.telegram_alert_bot import TelegramAlertBot
 from app.core.config import settings
 from app.fall_and_face_tracker import FallAndFaceTracker
 from app.modules.face_recognition import embed_face
+from app.database.db_manager import DatabaseManager
 
 app = Flask(__name__)
 app.config.update(settings.app.dict())
 app.secret_key = settings.app.secret_key
 
 bot = TelegramAlertBot(settings.telegram.bot_token)
+db_manager = DatabaseManager()
 
 tracker = FallAndFaceTracker(**settings.get_tracker_config(), alert_bot=bot)
 tracker.start_async()
 
-
+people_db = db_manager.get_all_people()
+if people_db:
+    tracker.set_face_db(people_db)
 @app.route("/register", methods=["POST"])
 def register():
     selected_chat = request.form.get("caretaker_chat_id")
 
     bot.set_chat_id(selected_chat)
-    people = {
-        "Bryan Ugas": np.load("face_emb/bryan.npy"),
-    }
+
+    people = db_manager.get_all_people()
+
     idx = 0
     while True:
         person_name = request.form.get(f"people[{idx}][name]")
@@ -43,17 +47,20 @@ def register():
 
         img = request.files.get(f"people[{idx}][image]")
 
-        img_bytes = img.read()
-        embeddings = embed_face(img_bytes)
+        if img:
+            img_bytes = img.read()
+            embeddings = embed_face(img_bytes)
 
-        people[person_name] = embeddings
+            if db_manager.add_person(person_name, embeddings):
+                people[person_name] = embeddings
+
         idx += 1
 
     tracker.set_face_db(people)
 
     session["registration_complete"] = True
     session["selected_chat"] = selected_chat
-    session["registered_people"] = list(people.keys())
+    session["registered_people"] = db_manager.get_people_list()
 
     return jsonify(
         {
@@ -70,7 +77,7 @@ def index():
     chats = bot.get_updates()
     registration_state = {
         "selected_chat": session.get("selected_chat"),
-        "registered_people": session.get("registered_people", []),
+        "registered_people": db_manager.get_people_list(),
         "registration_complete": session.get("registration_complete", False),
     }
     return render_template(
@@ -89,6 +96,28 @@ def video_feed():
 
     return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
+
+@app.route("/delete_person", methods=["POST"])
+def delete_person():
+    """Delete a person from the database."""
+    person_name = request.json.get("name")
+    if not person_name:
+        return jsonify({"success": False, "error": "Name is required"}), 400
+
+    if db_manager.delete_person(person_name):
+        # Update tracker with new people list
+        people = db_manager.get_all_people()
+        tracker.set_face_db(people)
+
+        return jsonify({
+            "success": True,
+            "message": f"Person {person_name} deleted successfully"
+        })
+    else:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to delete person {person_name}"
+        }), 500
 
 @app.route("/show_video")
 def show_video():
