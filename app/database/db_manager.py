@@ -2,8 +2,7 @@
 import sqlite3
 import numpy as np
 import pickle
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
+from typing import Dict, List, Optional
 
 
 class DatabaseManager:
@@ -45,8 +44,9 @@ class DatabaseManager:
             conn.commit()
 
     def add_person(self, name: str, embedding: np.ndarray) -> bool:
-        """Add or update a person's face embedding."""
+        """Add or update a person's face embedding (should be encrypted)."""
         try:
+            # embedding is already encrypted by LightPHE
             embedding_blob = pickle.dumps(embedding)
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -61,18 +61,19 @@ class DatabaseManager:
             return False
 
     def get_person_embedding(self, name: str) -> Optional[np.ndarray]:
-        """Get a person's face embedding by name."""
+        """Get a person's encrypted face embedding by name."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT embedding FROM people WHERE name = ?", (name,))
                 result = cursor.fetchone()
                 if result:
-                    return pickle.loads(result[0])
-            return None
+                    embedding_blob = result[0]
+                    embedding = pickle.loads(embedding_blob)
+                    return embedding
         except Exception as e:
             print(f"Error getting embedding for {name}: {e}")
-            return None
+        return None
 
     def get_all_people(self) -> Dict[str, np.ndarray]:
         """Get all people and their embeddings."""

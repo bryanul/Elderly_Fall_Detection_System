@@ -58,8 +58,9 @@ class FallAndFaceTracker:
 
         # Initialize components
         self.face_identifier = FaceIdentifier(face_db, face_id_threshold)
+        # Aumentar el timeout a 30 segundos para evitar reinicio rápido del contador
+        self.person_tracker = PersonTracker(attempt_timeout=30.0)
         self.fall_detector = FallDetector(fall_class_idx, threshold_fall_frames)
-        self.person_tracker = PersonTracker()
         self.video_processor = VideoProcessor(video_source)
         self.visualizer = FrameVisualizer()
 
@@ -116,6 +117,9 @@ class FallAndFaceTracker:
             self.person_tracker.set_identity(track_id, identity)
         else:
             self.person_tracker.increment_attempt(track_id)
+            print(
+                f"Intentos fallidos para track_id {track_id}: {self.person_tracker.track_id_attempts.get(track_id, 0)}"
+            )
 
         # Draw visualization
         current_identity = self.person_tracker.get_identity(track_id)

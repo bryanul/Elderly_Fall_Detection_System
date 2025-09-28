@@ -21,6 +21,7 @@ deepface = {git = "https://github.com/serengil/deepface.git"}
 tensorflow = "=2.19.0"
 tensorflow-io-gcs-filesystem = "0.31.0"
 tf-keras = "^2.19.0"
+notebook = "^7.4.7"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
