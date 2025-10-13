@@ -53,7 +53,7 @@ class PersonTracker:
         # Check if max attempts reached
         attempts = self.track_id_attempts.get(track_id, 0)
         if attempts >= self.max_attempts:
-            self.track_id_to_identity[track_id] = "no id"
+            self.track_id_to_identity[track_id] = "Desconocido"
             return False
 
         return True

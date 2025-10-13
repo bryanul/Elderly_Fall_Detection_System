@@ -7,7 +7,7 @@ import requests
 
 
 class TelegramAlertBot:
-    def __init__(self, bot_token: str):
+    def __init__(self, bot_token: str, chat_id: Optional[str] = None):
         """
         Initialize the Telegram Alert Bot
 
@@ -16,7 +16,7 @@ class TelegramAlertBot:
         """
         self.bot_token = bot_token
         self.base_url = f"https://api.telegram.org/bot{bot_token}"
-        self.chat_id = None
+        self.chat_id = chat_id
 
     def send_message(self, text: str) -> Dict[str, Any]:
         """

@@ -14,7 +14,8 @@ class DatabaseManager:
         """Initialize the database with required tables."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                            CREATE TABLE IF NOT EXISTS people
                            (
                                id
@@ -40,7 +41,33 @@ class DatabaseManager:
                                DEFAULT
                                CURRENT_TIMESTAMP
                            )
-                           """)
+                           """
+            )
+
+            cursor.execute(
+                """
+                           CREATE TABLE IF NOT EXISTS chat_config
+                           (
+                               id
+                               INTEGER
+                               PRIMARY
+                               KEY
+                               AUTOINCREMENT,
+                               chat_id
+                               TEXT
+                               NOT
+                               NULL,
+                               created_at
+                               TIMESTAMP
+                               DEFAULT
+                               CURRENT_TIMESTAMP,
+                               updated_at
+                               TIMESTAMP
+                               DEFAULT
+                               CURRENT_TIMESTAMP
+                           )
+                           """
+            )
             conn.commit()
 
     def add_person(self, name: str, embedding: np.ndarray) -> bool:
@@ -50,10 +77,13 @@ class DatabaseManager:
             embedding_blob = pickle.dumps(embedding)
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT OR REPLACE INTO people (name, embedding, updated_at)
                     VALUES (?, ?, CURRENT_TIMESTAMP)
-                """, (name, embedding_blob))
+                """,
+                    (name, embedding_blob),
+                )
                 conn.commit()
             return True
         except Exception as e:
@@ -111,3 +141,45 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting people list: {e}")
             return []
+
+    def set_chat_id(self, chat_id: str) -> bool:
+        """Set or update the chat_id in the database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Delete existing chat_id and insert new one
+                cursor.execute("DELETE FROM chat_config")
+                cursor.execute(
+                    """
+                    INSERT INTO chat_config (chat_id, updated_at)
+                    VALUES (?, CURRENT_TIMESTAMP)
+                """,
+                    (chat_id,),
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error setting chat_id {chat_id}: {e}")
+            return False
+
+    def get_chat_id(self) -> Optional[str]:
+        """Get the stored chat_id from the database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT chat_id FROM chat_config ORDER BY updated_at DESC LIMIT 1"
+                )
+                result = cursor.fetchone()
+                if result:
+                    return result[0]
+            return None
+        except Exception as e:
+            print(f"Error getting chat_id: {e}")
+            return None
+
+    def is_registration_complete(self) -> bool:
+        """Check if registration is complete (both chat_id and people exist)."""
+        chat_id = self.get_chat_id()
+        people_list = self.get_people_list()
+        return chat_id is not None and len(people_list) > 0

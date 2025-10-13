@@ -1,6 +1,5 @@
 import time
 
-import numpy as np
 from flask import (
     Flask,
     Response,
@@ -25,17 +24,24 @@ app.secret_key = settings.app.secret_key
 bot = TelegramAlertBot(settings.telegram.bot_token)
 db_manager = DatabaseManager()
 
+stored_chat_id = db_manager.get_chat_id()
+if stored_chat_id:
+    bot.set_chat_id(stored_chat_id)
+
 tracker = FallAndFaceTracker(**settings.get_tracker_config(), alert_bot=bot)
 tracker.start_async()
 
 people_db = db_manager.get_all_people()
 if people_db:
     tracker.set_face_db(people_db)
+
+
 @app.route("/register", methods=["POST"])
 def register():
     selected_chat = request.form.get("caretaker_chat_id")
 
     bot.set_chat_id(selected_chat)
+    db_manager.set_chat_id(selected_chat)
 
     people = db_manager.get_all_people()
 
@@ -58,7 +64,6 @@ def register():
 
     tracker.set_face_db(people)
 
-    session["registration_complete"] = True
     session["selected_chat"] = selected_chat
     session["registered_people"] = db_manager.get_people_list()
 
@@ -75,10 +80,12 @@ def register():
 @app.route("/")
 def index():
     chats = bot.get_updates()
+    stored_chat_id = db_manager.get_chat_id()
+
     registration_state = {
-        "selected_chat": session.get("selected_chat"),
+        "selected_chat": stored_chat_id,
         "registered_people": db_manager.get_people_list(),
-        "registration_complete": session.get("registration_complete", False),
+        "registration_complete": db_manager.is_registration_complete(),
     }
     return render_template(
         "index.html", title="Registro", chats=chats, state=registration_state
@@ -109,19 +116,21 @@ def delete_person():
         people = db_manager.get_all_people()
         tracker.set_face_db(people)
 
-        return jsonify({
-            "success": True,
-            "message": f"Person {person_name} deleted successfully"
-        })
+        return jsonify(
+            {"success": True, "message": f"Person {person_name} deleted successfully"}
+        )
     else:
-        return jsonify({
-            "success": False,
-            "error": f"Failed to delete person {person_name}"
-        }), 500
+        return (
+            jsonify(
+                {"success": False, "error": f"Failed to delete person {person_name}"}
+            ),
+            500,
+        )
+
 
 @app.route("/show_video")
 def show_video():
-    if not session.get("registration_complete"):
+    if not db_manager.is_registration_complete():
         return redirect(url_for("index"))
     return render_template("video.html")
 
@@ -147,4 +156,5 @@ if __name__ == "__main__":
         debug=settings.app.debug,
         host=settings.app.host,
         port=settings.app.port,
+        use_reloader=False,
     )

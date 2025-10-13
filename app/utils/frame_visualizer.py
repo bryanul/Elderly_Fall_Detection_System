@@ -34,14 +34,14 @@ class FrameVisualizer:
 
         # Prepare label text
         if identity is not None and track_id is not None:
-            label = f"{identity} (ID:{track_id}), {class_name}"
+            label = f"{identity}-{class_name}"
             color = (0, 255, 0)  # Green for identified
         elif track_id is not None:
-            if identity == "no id":
-                label = f"no id (ID:{track_id})"
+            if identity == "Desconocido":
+                label = f"No identificado"
                 color = (0, 0, 255)  # Red for no identification
             else:
-                label = f"Unknown (ID:{track_id})"
+                label = f"Desconocido"
                 color = (255, 255, 0)  # Yellow for processing
         else:
             label = class_name

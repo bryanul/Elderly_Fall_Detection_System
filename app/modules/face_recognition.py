@@ -11,8 +11,9 @@ from deepface import DeepFace
 
 # --- LightPHE key management ---
 KEY_DIR = os.path.dirname(__file__)
-SECRET_KEY_PATH = os.path.join(KEY_DIR, "lightphe_secret.txt")   # privada
-PUBLIC_KEY_PATH = os.path.join(KEY_DIR, "lightphe_public.txt")   # pública (opcional)
+SECRET_KEY_PATH = os.path.join(KEY_DIR, "lightphe_secret.txt")  # privada
+PUBLIC_KEY_PATH = os.path.join(KEY_DIR, "lightphe_public.txt")  # pública (opcional)
+
 
 def get_lightphe(precision: int = 19):
     """
@@ -22,7 +23,9 @@ def get_lightphe(precision: int = 19):
     """
     # 1) Si ya existe la privada, cargar directamente sin regenerar
     if os.path.exists(SECRET_KEY_PATH):
-        return LightPHE(algorithm_name="Paillier", precision=precision, key_file=SECRET_KEY_PATH)
+        return LightPHE(
+            algorithm_name="Paillier", precision=precision, key_file=SECRET_KEY_PATH
+        )
 
     # 2) No existe: crear instancia nueva (esto genera el par en memoria)
     cs = LightPHE(algorithm_name="Paillier", precision=precision)
@@ -33,7 +36,10 @@ def get_lightphe(precision: int = 19):
     cs.export_keys(PUBLIC_KEY_PATH, public=True)
 
     # 4) (Opcional) Reabrir desde archivo para asegurarnos que se restauran bien
-    return LightPHE(algorithm_name="Paillier", precision=precision, key_file=SECRET_KEY_PATH)
+    return LightPHE(
+        algorithm_name="Paillier", precision=precision, key_file=SECRET_KEY_PATH
+    )
+
 
 # --- Uso en tu programa ---
 cs = get_lightphe(precision=19)
