@@ -79,7 +79,7 @@ def register():
 
 @app.route("/")
 def index():
-    chats = bot.get_updates()
+    chats = bot.available_chats
     stored_chat_id = db_manager.get_chat_id()
 
     registration_state = {
@@ -138,7 +138,7 @@ def show_video():
 @app.route("/update_chats", methods=["POST"])
 def update_chats():
     try:
-        chats = bot.get_updates()
+        chats = bot.available_chats
         return jsonify({"success": True, "message": "Chats actualizados correctamente"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -149,6 +149,15 @@ def clear_session():
     """Clear session data and redirect to index."""
     session.clear()
     return redirect(url_for("index"))
+
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.get_json()
+
+    bot.handle_webhook(data)
+
+    return "ok", 200
 
 
 if __name__ == "__main__":
