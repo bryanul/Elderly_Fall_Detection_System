@@ -1,54 +1,169 @@
-import os
+import time
 
-from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
-from alerts.telegram_alert_bot import TelegramAlertBot
-
-load_dotenv()
-
-bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-
-if not bot_token:
-    raise ValueError("TELEGRAM_BOT_TOKEN not found in .env file. Please setup.")
+from app.alerts.telegram_alert_bot import TelegramAlertBot
+from app.core.config import settings
+from app.fall_and_face_tracker import FallAndFaceTracker
+from app.modules.face_recognition import embed_face
+from app.database.db_manager import DatabaseManager
 
 app = Flask(__name__)
-bot = TelegramAlertBot(bot_token)
+app.config.update(settings.app.dict())
+app.secret_key = settings.app.secret_key
 
+bot = TelegramAlertBot(settings.telegram.bot_token)
+db_manager = DatabaseManager()
 
-def your_embedding_function(image_bytes):
-    return [0.1, 0.2, 0.3]  # Replace with real embeddings
+stored_chat_id = db_manager.get_chat_id()
+if stored_chat_id:
+    bot.set_chat_id(stored_chat_id)
+
+tracker = FallAndFaceTracker(**settings.get_tracker_config(), alert_bot=bot)
+tracker.start_async()
+
+people_db = db_manager.get_all_people()
+if people_db:
+    tracker.set_face_db(people_db)
 
 
 @app.route("/register", methods=["POST"])
 def register():
-    selected_chat = request.form.get("selected_chat")
+    selected_chat = request.form.get("caretaker_chat_id")
 
-    people = []
+    bot.set_chat_id(selected_chat)
+    db_manager.set_chat_id(selected_chat)
+
+    people = db_manager.get_all_people()
+
     idx = 0
     while True:
         person_name = request.form.get(f"people[{idx}][name]")
         if not person_name:
             break
 
-        images = request.files.getlist(f"people[{idx}][images]")
-        embeddings = []
-        for img in images:
-            img_bytes = img.read()
-            emb = your_embedding_function(img_bytes)
-            embeddings.append(emb)
+        img = request.files.get(f"people[{idx}][image]")
 
-        people.append({"name": person_name, "embeddings": embeddings})
+        if img:
+            img_bytes = img.read()
+            embeddings = embed_face(img_bytes)
+
+            if db_manager.add_person(person_name, embeddings):
+                people[person_name] = embeddings
+
         idx += 1
 
-    return jsonify({"message": "Registered successfully", "people_count": len(people)})
+    tracker.set_face_db(people)
+
+    session["selected_chat"] = selected_chat
+    session["registered_people"] = db_manager.get_people_list()
+
+    return jsonify(
+        {
+            "message": "Registered successfully",
+            "people_count": len(people),
+            "chat_id": selected_chat,
+            "people": list(people.keys()),
+        }
+    )
 
 
 @app.route("/")
 def index():
-    chats = bot.get_updates()
-    return render_template("index.html", title="Registro", chats=chats)
+    chats = bot.available_chats
+    stored_chat_id = db_manager.get_chat_id()
+
+    registration_state = {
+        "selected_chat": stored_chat_id,
+        "registered_people": db_manager.get_people_list(),
+        "registration_complete": db_manager.is_registration_complete(),
+    }
+    return render_template(
+        "index.html", title="Registro", chats=chats, state=registration_state
+    )
+
+
+@app.route("/video_feed")
+def video_feed():
+    def gen():
+        while True:
+            frame = tracker.get_latest_frame()
+            if frame is not None:
+                yield b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
+            time.sleep(settings.video.stream_sleep_interval)
+
+    return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.route("/delete_person", methods=["POST"])
+def delete_person():
+    """Delete a person from the database."""
+    person_name = request.json.get("name")
+    if not person_name:
+        return jsonify({"success": False, "error": "Name is required"}), 400
+
+    if db_manager.delete_person(person_name):
+        # Update tracker with new people list
+        people = db_manager.get_all_people()
+        tracker.set_face_db(people)
+
+        return jsonify(
+            {"success": True, "message": f"Person {person_name} deleted successfully"}
+        )
+    else:
+        return (
+            jsonify(
+                {"success": False, "error": f"Failed to delete person {person_name}"}
+            ),
+            500,
+        )
+
+
+@app.route("/show_video")
+def show_video():
+    if not db_manager.is_registration_complete():
+        return redirect(url_for("index"))
+    return render_template("video.html")
+
+
+@app.route("/update_chats", methods=["POST"])
+def update_chats():
+    try:
+        chats = bot.available_chats
+        return jsonify({"success": True, "message": "Chats actualizados correctamente"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/clear_session")
+def clear_session():
+    """Clear session data and redirect to index."""
+    session.clear()
+    return redirect(url_for("index"))
+
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.get_json()
+
+    bot.handle_webhook(data)
+
+    return "ok", 200
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        debug=settings.app.debug,
+        host=settings.app.host,
+        port=settings.app.port,
+        use_reloader=False,
+    )

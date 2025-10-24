@@ -7,16 +7,32 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.12"
 requests = "^2.32.4"
 flask = "^3.1.1"
 python-dotenv = "^1.1.1"
-
+opencv-python = "^4.12.0.88"
+ultralytics = "^8.3.177"
+torch = { version = "=2.8.0+cu126", source = "pytorch" }
+torchvision = { version = "=0.23.0+cu126", source = "pytorch" }
+pydantic = "^2.11.7"
+pydantic-settings = "^2.10.1"
+deepface = {git = "https://github.com/serengil/deepface.git"}
+tensorflow = "=2.19.0"
+tensorflow-io-gcs-filesystem = "0.31.0"
+tf-keras = "^2.19.0"
+notebook = "^7.4.7"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
 isort = "^6.0.1"
 pre-commit = "^4.2.0"
+
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu126/"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core"]
